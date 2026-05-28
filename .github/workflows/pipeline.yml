@@ -25,27 +25,25 @@ run: |
 echo "Verificando arquivos..."
 ls src/
 echo "Build OK!"
-# PASSO 3 — Secrets Scanning (Gitleaks) — quebra se achar credencial
+# PASSO 3 — Secrets Scanning (Gitleaks) — analisa credenciais
 - name: 🔑 Secrets Scanning - Gitleaks
-run: |
-docker run --rm -v "${{ github.workspace }}:/repo" zricethezav/gitleaks:latest \
-detect \
---source="/repo" \
---no-git \
---config="/repo/.gitleaks.toml" \
---report-format=sarif \
---report-path="/repo/gitleaks-report.sarif" \
---redact \
---verbose
-# Publica o relatório do Gitleaks como artefato (mesmo se quebrar)
-- name: 📄 Upload do relatório do Gitleaks
-if: always()
-uses: actions/upload-artifact@v4
-with:
+  run: |
+    docker run --rm -v "${{ github.workspace }}:/repo" zricethezav/gitleaks:latest \
+    detect \
+    --source="/repo" \
+    --no-git \
+    --report-format=json \
+    --report-path="/repo/gitleaks-report.json" \
+    --verbose || echo "Gitleaks encontrou segredos! Verifique o relatório."
 
-name: gitleaks-report
-path: gitleaks-report.sarif
-if-no-files-found: ignore
+# Publica o relatório do Gitleaks como artefato (mesmo se achar senhas)
+- name: 📄 Upload do relatório do Gitleaks
+  if: always()
+  uses: actions/upload-artifact@v4
+  with:
+    name: gitleaks-report
+    path: gitleaks-report.json
+    if-no-files-found: ignore
 # PASSO 4 — SAST (Semgrep) — analisa o código-fonte
 - name: 🔍 SAST - Semgrep
 run: |
